@@ -37,14 +37,17 @@ local PHASES = phase_checker.phases
 
 local header_body_log = phase_checker.new(PHASES.header_filter,
                                           PHASES.body_filter,
-                                          PHASES.log)
+                                          PHASES.log,
+                                          PHASES.admin_api)
 
 local rewrite_access = phase_checker.new(PHASES.rewrite,
-                                         PHASES.access)
+                                         PHASES.access,
+                                         PHASES.admin_api)
 
 local rewrite_access_header = phase_checker.new(PHASES.rewrite,
                                                 PHASES.access,
-                                                PHASES.header_filter)
+                                                PHASES.header_filter,
+                                                PHASES.admin_api)
 
 
 local function new(self, major_version)
@@ -81,7 +84,7 @@ local function new(self, major_version)
   -- returned as-is.
   --
   -- @function kong.response.get_status
-  -- @phases header_filter, body_filter, log
+  -- @phases header_filter, body_filter, log, admin_api
   -- @treturn number status The HTTP status code currently set for the
   -- downstream response
   -- @usage
@@ -107,7 +110,7 @@ local function new(self, major_version)
   -- of the first occurrence of this header.
   --
   -- @function kong.response.get_header
-  -- @phases header_filter, body_filter, log
+  -- @phases header_filter, body_filter, log, admin_api
   -- @tparam string name The name of the header
   --
   -- Header names are case-insensitive and dashes (`-`) can be written as
@@ -162,7 +165,7 @@ local function new(self, major_version)
   -- be greater than **1** and not greater than **1000**.
   --
   -- @function kong.response.get_headers
-  -- @phases header_filter, body_filter, log
+  -- @phases header_filter, body_filter, log, admin_api
   -- @tparam[opt] number max_headers Limits how many headers are parsed
   -- @treturn table headers A table representation of the headers in the
   -- response
@@ -220,7 +223,7 @@ local function new(self, major_version)
   --   contacting the proxied Service.
   --
   -- @function kong.response.get_source
-  -- @phases header_filter, body_filter, log
+  -- @phases header_filter, body_filter, log, admin_api
   -- @treturn string the source.
   -- @usage
   -- if kong.response.get_source() == "service" then
@@ -253,7 +256,7 @@ local function new(self, major_version)
   -- preparing headers to be sent back to the client.
   --
   -- @function kong.response.set_status
-  -- @phases rewrite, access, header_filter
+  -- @phases rewrite, access, header_filter, admin_api
   -- @tparam number status The new status
   -- @return Nothing; throws an error on invalid input.
   -- @usage
@@ -287,7 +290,7 @@ local function new(self, major_version)
   -- This function should be used in the `header_filter` phase, as Kong is
   -- preparing headers to be sent back to the client.
   -- @function kong.response.set_header
-  -- @phases rewrite, access, header_filter
+  -- @phases rewrite, access, header_filter, admin_api
   -- @tparam string name The name of the header
   -- @tparam string|number|boolean value The new value for the header
   -- @return Nothing; throws an error on invalid input.
@@ -317,7 +320,7 @@ local function new(self, major_version)
   -- This function should be used in the `header_filter` phase, as Kong is
   -- preparing headers to be sent back to the client.
   -- @function kong.response.add_header
-  -- @phases rewrite, access, header_filter
+  -- @phases rewrite, access, header_filter, admin_api
   -- @tparam string name The header name
   -- @tparam string|number|boolean value The header value
   -- @return Nothing; throws an error on invalid input.
@@ -352,7 +355,7 @@ local function new(self, major_version)
   -- preparing headers to be sent back to the client.
   --
   -- @function kong.response.clear_header
-  -- @phases rewrite, access, header_filter
+  -- @phases rewrite, access, header_filter, admin_api
   -- @tparam string name The name of the header to be cleared
   -- @return Nothing; throws an error on invalid input.
   -- @usage
@@ -393,7 +396,7 @@ local function new(self, major_version)
   -- specified in the `headers` argument. Other headers remain unchanged.
   --
   -- @function kong.response.set_headers
-  -- @phases rewrite, access, header_filter
+  -- @phases rewrite, access, header_filter, admin_api
   -- @tparam table headers
   -- @return Nothing; throws an error on invalid input.
   -- @usage
@@ -525,7 +528,7 @@ local function new(self, major_version)
   -- Unless manually specified, this method will automatically set the
   -- Content-Length header in the produced response for convenience.
   -- @function kong.response.exit
-  -- @phases rewrite, access
+  -- @phases rewrite, access, admin_api
   -- @tparam number status The status to be used
   -- @tparam[opt] table|string body The body to be used
   -- @tparam[opt] table headers The headers to be used
