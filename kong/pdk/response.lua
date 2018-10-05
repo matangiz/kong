@@ -47,7 +47,7 @@ local rewrite_access_header = phase_checker.new(PHASES.rewrite,
                                                 PHASES.header_filter)
 
 
-local function new(pdk, major_version)
+local function new(self, major_version)
   local _RESPONSE = {}
 
   local MIN_HEADERS          = 1
@@ -59,6 +59,9 @@ local function new(pdk, major_version)
 
   local SERVER_HEADER_NAME   = "Server"
   local SERVER_HEADER_VALUE  = meta._NAME .. "/" .. meta._VERSION
+
+  local SERVER_VIA_NAME   = "Via"
+  local SERVER_VIA_VALUE  = SERVER_HEADER_VALUE
 
   local CONTENT_LENGTH_NAME  = "Content-Length"
   local CONTENT_TYPE_NAME    = "Content-Type"
@@ -446,7 +449,12 @@ local function new(pdk, major_version)
     end
 
     ngx.status = status
-    ngx.header[SERVER_HEADER_NAME] = SERVER_HEADER_VALUE
+    if self.configuration.enabled_headers[SERVER_HEADER_NAME] then
+      ngx.header[SERVER_HEADER_NAME] = SERVER_HEADER_VALUE
+    end
+    if self.configuration.enabled_headers[SERVER_VIA_NAME] then
+      ngx.header[SERVER_VIA_NAME] = SERVER_VIA_VALUE
+    end
 
     if headers ~= nil then
       for name, value in pairs(headers) do
