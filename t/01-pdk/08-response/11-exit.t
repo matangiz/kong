@@ -3,7 +3,7 @@ use warnings FATAL => 'all';
 use Test::Nginx::Socket::Lua;
 use t::Util;
 
-plan tests => repeat_each() * (blocks() * 4) + 1;
+plan tests => repeat_each() * (blocks() * 4);
 
 run_tests();
 
@@ -15,7 +15,7 @@ __DATA__
     location = /t {
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local ok, err = pcall(pdk.response.exit)
             if not ok then
@@ -39,7 +39,7 @@ code must be a number
     location = /t {
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local ok1, err1 = pcall(pdk.response.exit, 99)
             local ok2, err2 = pcall(pdk.response.exit, 600)
@@ -71,7 +71,7 @@ code must be a number between 100 and 599
         access_by_lua_block {
             local ffi = require "ffi"
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local ok1, err1 = pcall(pdk.response.exit, 200, pcall)
             local ok2, err2 = pcall(pdk.response.exit, 200, ngx.null)
@@ -114,7 +114,7 @@ body must be a nil, string or table
             ngx.send_headers()
 
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local ok, err = pcall(pdk.response.exit, 200)
             if not ok then
@@ -140,7 +140,7 @@ headers have already been sent
             ngx.ctx.delay_response = true
 
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             pdk.response.exit(500, "ok")
         }
@@ -169,7 +169,7 @@ headers have already been sent
     location = /t {
         rewrite_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             pdk.response.exit(200)
             ngx.ctx.rewite = true
@@ -217,7 +217,7 @@ true
         default_type '';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             pdk.response.exit(456)
         }
@@ -241,7 +241,7 @@ GET /t
             ngx.ctx.delay_response = true
 
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(456)
         }
@@ -261,14 +261,14 @@ Server: kong/\d+\.\d+\.\d+(rc\d?)?
 
 
 
-=== TEST 9: response.exit() adds server header
+=== TEST 9: response.exit() adds server header if enabled
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type '';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(ngx.HTTP_NO_CONTENT)
         }
@@ -285,13 +285,106 @@ Server: kong/\d+\.\d+\.\d+(rc\d?)?
 
 
 
-=== TEST 10: response.exit() errors if headers is not a table
+=== TEST 10: response.exit() does not add server header if not enabled
+--- http_config eval: $t::Util::HttpConfig
+--- config
+    location = /t {
+        default_type '';
+        access_by_lua_block {
+            local PDK = require "kong.pdk"
+            local pdk = PDK.new({ enabled_headers = {} })
+
+            pdk.response.exit(ngx.HTTP_NO_CONTENT)
+        }
+    }
+--- request
+GET /t
+--- error_code: 204
+--- response_body chop
+
+--- no_error_log
+[error]
+
+
+
+=== TEST 11: response.exit() adds via header if enabled
+--- http_config eval: $t::Util::HttpConfig
+--- config
+    location = /t {
+        default_type '';
+        access_by_lua_block {
+            local PDK = require "kong.pdk"
+            local pdk = PDK.new({ enabled_headers = { ["Via"] = true } })
+
+            pdk.response.exit(ngx.HTTP_NO_CONTENT)
+        }
+    }
+--- request
+GET /t
+--- error_code: 204
+--- response_headers_like
+Via: kong/\d+\.\d+\.\d+(rc\d?)?
+--- response_body chop
+
+--- no_error_log
+[error]
+
+
+
+=== TEST 12: response.exit() adds both server and via header if enabled
+--- http_config eval: $t::Util::HttpConfig
+--- config
+    location = /t {
+        default_type '';
+        access_by_lua_block {
+            local PDK = require "kong.pdk"
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true, ["Via"] = true } })
+
+            pdk.response.exit(ngx.HTTP_NO_CONTENT)
+        }
+    }
+--- request
+GET /t
+--- error_code: 204
+--- response_headers_like
+Server: kong/\d+\.\d+\.\d+(rc\d?)?
+Via: kong/\d+\.\d+\.\d+(rc\d?)?
+--- response_body chop
+
+--- no_error_log
+[error]
+
+
+
+=== TEST 13: response.exit() does not add via header if not enabled
+--- http_config eval: $t::Util::HttpConfig
+--- config
+    location = /t {
+        default_type '';
+        access_by_lua_block {
+            local PDK = require "kong.pdk"
+            local pdk = PDK.new({ enabled_headers = {} })
+
+            pdk.response.exit(ngx.HTTP_NO_CONTENT)
+        }
+    }
+--- request
+GET /t
+--- error_code: 204
+--- response_body chop
+
+--- no_error_log
+[error]
+
+
+
+=== TEST 14: response.exit() errors if headers is not a table
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local pok, err = pcall(pdk.response.exit, 200, nil, 127001)
             ngx.say(err)
@@ -307,13 +400,13 @@ headers must be a nil or table
 
 
 
-=== TEST 11: response.exit() errors if header name is not a string
+=== TEST 15: response.exit() errors if header name is not a string
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local pok, err = pcall(pdk.response.exit, 200, nil, {[2] = "foo"})
             assert(not pok)
@@ -330,13 +423,13 @@ invalid header name "2": got number, expected string
 
 
 
-=== TEST 12: response.exit() errors if header value is of a bad type
+=== TEST 16: response.exit() errors if header value is of a bad type
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local pok, err = pcall(pdk.response.exit, 200, nil, {["foo"] = function() end})
             assert(not pok)
@@ -352,13 +445,13 @@ invalid header value for "foo": got function, expected string, number, boolean o
 
 
 
-=== TEST 13: response.exit() errors if header value array element is of a bad type
+=== TEST 17: response.exit() errors if header value array element is of a bad type
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = {} })
 
             local pok, err = pcall(pdk.response.exit, 200, nil, {["foo"] = { function() end }})
             assert(not pok)
@@ -375,13 +468,13 @@ invalid header value in array "foo": got function, expected string
 
 
 
-=== TEST 14: response.exit() sends "text/plain" response
+=== TEST 18: response.exit() sends "text/plain" response
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, "hello", { ["Content-Type"] = "text/plain" })
         }
@@ -399,14 +492,14 @@ hello
 
 
 
-=== TEST 15: response.exit() sends no content-type header by default
+=== TEST 19: response.exit() sends no content-type header by default
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type 'text/test';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, "hello")
         }
@@ -424,14 +517,14 @@ hello
 
 
 
-=== TEST 16: response.exit() sends json response when body is table
+=== TEST 20: response.exit() sends json response when body is table
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type 'text/test';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, { message = "hello" })
         }
@@ -449,14 +542,14 @@ Content-Type: application/json; charset=utf-8
 
 
 
-=== TEST 17: response.exit() sends json response when body is table overrides content-type
+=== TEST 21: response.exit() sends json response when body is table overrides content-type
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type 'text/test';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, { message = "hello" }, {
                 ["Content-Type"] = "text/plain"
@@ -476,14 +569,14 @@ Content-Type: application/json; charset=utf-8
 
 
 
-=== TEST 18: response.exit() sets content-length header
+=== TEST 22: response.exit() sets content-length header
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type 'text/test';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, "", {
                 ["Content-Type"] = "text/plain"
@@ -504,14 +597,14 @@ Content-Length: 0
 
 
 
-=== TEST 19: response.exit() sets content-length header even when no body
+=== TEST 23: response.exit() sets content-length header even when no body
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type 'text/test';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, nil, {
                 ["Content-Type"] = "text/plain",
@@ -533,14 +626,14 @@ Content-Length: 0
 
 
 
-=== TEST 20: response.exit() sets content-length header with text body
+=== TEST 24: response.exit() sets content-length header with text body
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type 'text/test';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, "a", {
                 ["Content-Type"] = "text/plain",
@@ -562,14 +655,14 @@ a
 
 
 
-=== TEST 21: response.exit() sets content-length header with table body
+=== TEST 25: response.exit() sets content-length header with table body
 --- http_config eval: $t::Util::HttpConfig
 --- config
     location = /t {
         default_type 'text/test';
         access_by_lua_block {
             local PDK = require "kong.pdk"
-            local pdk = PDK.new()
+            local pdk = PDK.new({ enabled_headers = { ["Server"] = true } })
 
             pdk.response.exit(200, { message = "hello" }, {
                 ["Content-Type"] = "text/plain",
