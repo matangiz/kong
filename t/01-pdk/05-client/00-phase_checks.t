@@ -40,7 +40,7 @@ qq{
                 header_filter = true,
                 body_filter   = true,
                 log           = true,
-                admin_api     = "forced false",
+                admin_api     = true,
             }, {
                 method        = "get_forwarded_ip",
                 args          = {},
@@ -51,7 +51,7 @@ qq{
                 header_filter = true,
                 body_filter   = true,
                 log           = true,
-                admin_api     = "forced false",
+                admin_api     = true,
             }, {
                 method        = "get_port",
                 args          = {},
@@ -62,7 +62,7 @@ qq{
                 header_filter = true,
                 body_filter   = true,
                 log           = true,
-                admin_api     = "forced false",
+                admin_api     = true,
             }, {
                 method        = "get_forwarded_port",
                 args          = {},
@@ -73,7 +73,7 @@ qq{
                 header_filter = true,
                 body_filter   = true,
                 log           = true,
-                admin_api     = "forced false",
+                admin_api     = true,
             },
         }
 
