@@ -516,7 +516,7 @@ GET /t
 
 
 
-=== TEST 6: verify phase checking for kong.response.exit, admin_api, with tables
+=== TEST 8: verify phase checking for kong.response.exit, admin_api, with tables
 --- http_config eval
 qq{
     $t::Util::HttpConfig
