@@ -233,7 +233,6 @@ for _, strategy in helpers.each_strategy() do
         }))
       end)
 
-
       teardown(function()
         helpers.stop_kong()
         assert(db:truncate())
@@ -271,6 +270,7 @@ for _, strategy in helpers.each_strategy() do
             local res = proxy_client():get("/status/200", {
               headers = { Host = "test-service1.com" },
             })
+
             ngx.sleep(SLEEP_TIME) -- Wait for async timer to increment the limit
 
             assert.res_status(200, res)
@@ -282,6 +282,7 @@ for _, strategy in helpers.each_strategy() do
             local res = proxy_client():get("/status/200", {
               headers = { Host = "test-service2.com" },
             })
+
             ngx.sleep(SLEEP_TIME) -- Wait for async timer to increment the limit
 
             assert.res_status(200, res)
@@ -472,6 +473,9 @@ for _, strategy in helpers.each_strategy() do
             local body = assert.res_status(500, res)
             local json = cjson.decode(body)
             assert.same({ message = "An unexpected error occurred" }, json)
+
+            db:reset()
+            helpers.get_db_utils(strategy)
           end)
           it("keeps working if an error occurs", function()
             local res = proxy_client():get("/status/200", {
@@ -491,6 +495,9 @@ for _, strategy in helpers.each_strategy() do
             assert.res_status(200, res)
             assert.falsy(res.headers["x-ratelimit-limit-minute"])
             assert.falsy(res.headers["x-ratelimit-remaining-minute"])
+
+            db:reset()
+            helpers.get_db_utils(strategy)
           end)
         end)
 
